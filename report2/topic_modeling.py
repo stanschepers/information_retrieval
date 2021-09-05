@@ -130,6 +130,7 @@ def build_lda_model(corpus, dictionary, n_topics, passes=10, alpha="auto", eta=N
 
 
 def build_mallet_model(corpus, dictionary, n_topics):
+    """ Download MALLET in this folder """
     return LdaMallet("mallet-2.0.8/bin/mallet", corpus=corpus, num_topics=n_topics, id2word=dictionary, workers=5,
                      iterations=500)
 
@@ -144,10 +145,10 @@ if __name__ == '__main__':
     spc = spacy.load('en_core_web_sm')
 
     dataset = "news_dataset"
-    n_sentences = 10
+    n_sentences = 50
     n_topics = 20
 
-    reading = True
+    reading = False
 
     if not reading:
         data = pd.read_csv(f"{dataset}.csv")["content"]
@@ -155,7 +156,7 @@ if __name__ == '__main__':
 
         data = get_first_n_sentences(data, n_sentences=n_sentences, return_text=True)
 
-        KEEP_POS = ["NOUN", "VERB", "ADJ", "PROPN"]  # NOUN, VERB, ADJ, ADV, PROPN
+        KEEP_POS = ["NOUN", "VERB", "PROPN"]  # NOUN, VERB, ADJ, ADV, PROPN
         pipe = spc.pipe(data, disable=["parser", "ner"], n_process=6)
 
         processed = list()
@@ -166,15 +167,15 @@ if __name__ == '__main__':
                     p_d.append(token.lemma_)
             processed.append(p_d)
 
-        processed = process_trigrams(processed)
+        # processed = process_trigrams(processed)
 
         dictionary = Dictionary(processed)
-        dictionary.filter_extremes(no_below=20, no_above=0.5)
+        dictionary.filter_extremes(no_below=10, no_above=0.6)
         corpus = [dictionary.doc2bow(text) for text in processed]
-        save_dictionary_corpus_texts(dataset + "_" + str(n_sentences), dictionary, corpus, processed)
+        # save_dictionary_corpus_texts(dataset + "_" + str(n_sentences), dictionary, corpus, processed)
     else:
         dictionary, _, processed = load_dictionary_corpus_texts(dataset + "_" + str(n_sentences))
-        dictionary.filter_extremes(no_below=20, no_above=0.5)
+        # dictionary.filter_extremes(no_below=20, no_above=0.6)
         corpus = [dictionary.doc2bow(text) for text in processed]
 
     model = build_lda_model(corpus, dictionary, n_topics=n_topics, use_multicore=True)

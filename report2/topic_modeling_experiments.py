@@ -21,6 +21,7 @@ N_EXPERIMENTS = 5
 
 N_WORKERS = 5
 
+
 def calculate_statitics_results(results, parameters):
     columns = parameters + ["coherence"]
     results_df = pd.DataFrame(results, columns=columns)
@@ -44,13 +45,13 @@ def _fail_safe_experiment(fn):
         print(e)
 
 
-def experiment(name, data, experiment_fn, parameters):
+def experiment(name, data, fn, parameters):
     start_time = time.time()
     print("Starting on", name)
 
     try:
         with Pool(N_WORKERS) as pool:
-            results_list = pool.map(experiment_fn, chunks(data, len(data) // N_EXPERIMENTS))
+            results_list = pool.map(fn, chunks(data, len(data) // N_EXPERIMENTS))
         results = []
         for result in results_list:
             results.extend(result)
@@ -131,12 +132,12 @@ def _experiment_filtering_extremes(data):
     below_list = [5, 10, 20, 25]
     default_config = dict()
 
-    main_dictionary, main_corpus, main_texts = preprocess_texts(data, default_config, no_above=1, no_below=1)
+    # main_dictionary, main_corpus, main_texts = preprocess_texts(data, default_config, no_above=1, no_below=1)
 
-    for n_topics in DEFAULT_N_TOPICS:
+    for n_topics in [10]:
         for above in above_list:
             for below in below_list:
-                dictionary, corpus, texts = preprocess_texts(main_texts, {}, no_above=above, no_below=below, dictionary=main_dictionary)
+                dictionary, corpus, texts = preprocess_texts(data, {}, no_above=above, no_below=below)
                 model = build_lda_model(corpus, dictionary, n_topics=n_topics)
                 if model is not None:
                     perplexity, coherence = evaluate_lda(model, dictionary, corpus, texts)
@@ -169,7 +170,7 @@ def _experiment_n_passes(data):
 
     n_passes_list = [1, 5, 10, 20, 50, 100, 200]
 
-    for n_topics in DEFAULT_N_TOPICS:
+    for n_topics in [10]:
         for n_passes in n_passes_list:
             model = build_lda_model(corpus, dictionary, n_topics=n_topics, passes=n_passes)
             if model is not None:
@@ -189,6 +190,7 @@ def experiment_n_topics(data):
 
     for n_topics in n_topic_list:
         model = build_lda_model(corpus, dictionary, n_topics=n_topics, use_multicore=True)
+        # Fail Safe
         if model is not None:
             perplexity, coherence = evaluate_lda(model, dictionary, corpus, texts)
         else:
@@ -211,13 +213,20 @@ if __name__ == '__main__':
     print("Number of processes:", N_WORKERS)
     print("N topics:", DEFAULT_N_TOPICS)
     print("Starting on:", datetime.datetime.now())
+
     # Preprocessing
-    experiment("n_sentences", data, _experiment_n_sentences, ["n_topics", "n_sentences"])
-    data = get_first_n_sentences(data, n_sentences=10)
-    experiment("stemm_vs_lemm", data, _experiment_lemmatize_vs_stemming, ["n_topics", "preprocessing"])
-    experiment("ngrams", data, _experiment_ngrams, ["n_topics", "ngrams"])
-    experiment("filter_extremes", data, _experiment_filtering_extremes, ["n_topics", "above", "below"])
+    # experiment("n_sentences", data, _experiment_n_sentences, ["n_topics", "n_sentences"])
+    # data = get_first_n_sentences(data, n_sentences=10)
+    # experiment("stemm_vs_lemm", data, _experiment_lemmatize_vs_stemming, ["n_topics", "preprocessing"])
+    # experiment("ngrams", data, _experiment_ngrams, ["n_topics", "ngrams"])
+    # experiment("filter_extremes", data, _experiment_filtering_extremes, ["n_topics", "above", "below"])
 
     # Model
-    experiment("n_passes", data, _experiment_n_passes, ["n_topics", "n_passes"])
-    experiment_n_topics(data)
+    # experiment("n_passes", data, _experiment_n_passes, ["n_topics", "n_passes"])
+    # experiment_n_topics(data)
+
+    # Base Model
+    dictionary, corpus, texts = preprocess_texts(data, {})
+    model = build_lda_model(corpus, dictionary, n_topics=10, use_multicore=False)
+    perplexity, coherence = evaluate_lda(model, dictionary, corpus, texts)
+
