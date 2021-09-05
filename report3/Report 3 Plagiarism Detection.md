@@ -61,20 +61,14 @@ below are the average of 10 experiments.
 
 | Preproccessing Methods | Time Preproccessing (in seconds, wall time) | Average size of docuement (# tokens) | Time brute force comparison (in seconds, wall time) | Number of matches (threshold = 0.8) |
 | ---------------------- | ------------------------------------------: | -----------------------------------: | --------------------------------------------------: | ----------------------------------: |
-| 1-Shingle (tokenise)   |                                      5.0791 |                             190.6104 |                                                 278 |                              **
-82** |
-| 2-Shingle              |                                  **
-4.5371** |                             256.4224 |                                                   / |                                   / |
-| 5-Shingle              |                                        5.22 |                             258.5242 |                                                 282 |                              **
-82** |
+| 1-Shingle (tokenise)   |                                      5.0791 |                             190.6104 |                                                 278 |                                  82 |
+| 2-Shingle              |                                      4.5371 |                             256.4224 |                                                   / |                                   / |
+| 5-Shingle              |                                        5.22 |                             258.5242 |                                                 282 |                                  82 |
 | 7-Shingle              |                                      4.7972 |                             256.5403 |                                                   / |                                   / |
-| 10-Shingle             |                                      4.7387 |                              253.543 |                                                 295 |                              **
-82** |
-| NLP                    |                                       4.962 |                             149.0068 |                                             **
-202** |                              **82** |
+| 10-Shingle             |                                      4.7387 |                              253.543 |                                                 295 |                                  82 |
+| NLP                    |                                       4.962 |                             149.0068 |                                                 202 |                                  82 |
 | NLP with lemmatisation |                                      8.4662 |                             147.5701 |                                                   / |                                   / |
-| NLP with stemming      |                                      9.6424 |                         **
-146.4729** |                                                   / |                                   / |
+| NLP with stemming      |                                      9.6424 |                             146.4729 |                                                   / |                                   / |
 
 The conclusion is that NLP (without stemming or lemmatisation) reduces the average size of the document while being as
 fast as the k-shingling preproccing. The other NLP methodes do also a good job at reducing the average document size.
@@ -278,6 +272,4 @@ References can be found below. Big shoutout to @ekzhu, author of `datasketch`, f
 [^datasketch]: http://ekzhu.com/datasketch/index.html
 
 [^lsh]: https://towardsdatascience.com/understanding-locality-sensitive-hashing-49f6d1f6134
-
-
 

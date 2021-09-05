@@ -4,6 +4,8 @@ Experiments
 
 experimetns
 
+Contains code from https://www.machinelearningplus.com/nlp/topic-modeling-gensim-python/#19findthemostrepresentativedocumentforeachtopic
+
 """
 import datetime
 import multiprocessing
@@ -11,6 +13,7 @@ import random
 import time
 from multiprocessing import Pool
 
+import numpy as np
 import pandas as pd
 
 from Assignments.report2.topic_modeling import preprocess_texts, build_lda_model, evaluate_lda, get_first_n_sentences
@@ -203,8 +206,11 @@ def experiment_n_topics(data):
     print(mean)
 
 
+
+
+
 if __name__ == '__main__':
-    data = pd.read_csv("news_dataset.csv")["content"].sample(frac=0.5)
+    data = pd.read_csv("news_dataset_small.csv")["content"].sample(frac=0.5)
     data = data.dropna().values.tolist()
     random.shuffle(data)
 
@@ -226,7 +232,8 @@ if __name__ == '__main__':
     # experiment_n_topics(data)
 
     # Base Model
-    dictionary, corpus, texts = preprocess_texts(data, {})
-    model = build_lda_model(corpus, dictionary, n_topics=10, use_multicore=False)
-    perplexity, coherence = evaluate_lda(model, dictionary, corpus, texts)
+    dictionary, corpus, texts = preprocess_texts(data, {}, multicore=True)
+    model = build_lda_model(corpus, dictionary, n_topics=20, use_multicore=True)
+    perplexity, coherence = evaluate_lda(model, dictionary, corpus, texts, use_multicore=True)
+    df = format_topics_sentences(model, corpus, texts, n_docs=5)
 

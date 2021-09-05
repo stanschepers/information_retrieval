@@ -17,7 +17,11 @@ from gensim import corpora
 from Assignments.report2.ldamallet import LdaMallet
 from preprocess_nlp import preprocess_nlp
 
-N_WORKERS = 1
+import gensim
+from gensim.models import LdaModel
+from gensim.corpora import Dictionary, MmCorpus
+
+N_WORKERS = 5
 RANDOM_STATE = 42
 
 
@@ -34,7 +38,7 @@ def evaluate_lda(model, dictionary, corpus, texts, calculate_coherence=True, use
     coherence_lda = None
     if calculate_coherence:
         coherence_model_lda = CoherenceModel(model=model, texts=texts, dictionary=dictionary,
-                                             coherence='c_v', processes=5 if use_multicore else 1)
+                                             coherence='c_v', processes=N_WORKERS if use_multicore else 1)
         coherence_lda = coherence_model_lda.get_coherence()
     return 0, coherence_lda
 
@@ -120,10 +124,10 @@ def build_lda_model(corpus, dictionary, n_topics, passes=10, alpha="auto", eta=N
             return gensim.models.ldamulticore.LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=n_topics,
                                                            random_state=RANDOM_STATE, passes=passes,
                                                            per_word_topics=True,
-                                                           eval_every=None, workers=5)
+                                                           eval_every=100, workers=N_WORKERS)
         return gensim.models.ldamulticore.LdaModel(corpus=corpus, id2word=dictionary, num_topics=n_topics,
                                                    random_state=RANDOM_STATE, passes=passes, per_word_topics=True,
-                                                   eval_every=None, alpha=alpha, eta=eta)
+                                                   eval_every=100, alpha=alpha, eta=eta)
     except Exception as e:
         print("LDA Exception:", e, "Len corpus:", len(corpus), "Len dictionary:", len(dictionary.keys()))
         return None
@@ -135,16 +139,77 @@ def build_mallet_model(corpus, dictionary, n_topics):
                      iterations=500)
 
 
-if __name__ == '__main__':
-    import spacy
+def preprocess_spacy(data, n_sentences=10, trigram=False):
+    spc = spacy.load('en_core_web_sm')
+    data = get_first_n_sentences(data, n_sentences=n_sentences, return_text=True)
 
-    import gensim
-    from gensim.models import LdaModel
-    from gensim.corpora import Dictionary, MmCorpus
+    KEEP_POS = ["NOUN", "VERB", "PROPN", "ADJ", "ADV"]  # NOUN, VERB, ADJ, ADV, PROPN
+    pipe = spc.pipe(data, disable=["parser", "ner"], n_process=6)
+
+    processed = list()
+    for doc in pipe:
+        p_d = list()
+        for token in doc:
+            if token.pos_ in KEEP_POS and not token.is_stop:
+                p_d.append(token.lemma_)
+        processed.append(p_d)
+
+    if trigram:
+        processed = process_trigrams(processed)
+
+    dictionary = Dictionary(processed)
+    dictionary.filter_extremes(no_below=10, no_above=0.6)
+    corpus = [dictionary.doc2bow(text) for text in processed]
+    return dictionary, corpus, processed
+
+
+def format_topics_sentences(ldamodel, corpus, texts, n_topics=20, n_docs=100):
+    """ https://www.machinelearningplus.com/nlp/topic-modeling-gensim-python/#19findthemostrepresentativedocumentforeachtopic
+     and some modifications TODO rewrite """
+    # Init output
+    sent_topics_df = pd.DataFrame()
+
+    # Get main topic in each document
+    for i, row in enumerate(ldamodel.get_document_topics(corpus)):
+        row = sorted(row, key=lambda x: x[1], reverse=True)
+        # Get the Dominant topic, Perc Contribution and Keywords for each document
+        for j, (topic_num, prop_topic) in enumerate(row):
+            if j == 0:  # => dominant topic
+                wp = ldamodel.show_topic(topic_num)
+                topic_keywords = ", ".join([word for word, prop in wp])
+                sent_topics_df = sent_topics_df.append(
+                    pd.Series([int(topic_num), round(prop_topic, 5), topic_keywords]), ignore_index=True)
+            else:
+                break
+    sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+
+    # Add original text to the end of the output
+    contents = pd.Series(texts, name="Contents")
+    sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
+    sent_topics_df["Dominant_Topic"] = sent_topics_df["Dominant_Topic"].astype(int)
+    a = dict()
+    for i in range(n_topics):
+        t = sent_topics_df[(sent_topics_df["Dominant_Topic"] == i)].sort_values(["Perc_Contribution"])
+        a[i] = list(t.index)[:n_docs]
+    return pd.DataFrame(a)
+
+def convertldaGenToldaMallet(mallet_model):
+    """ from https://neptune.ai/blog/pyldavis-topic-modelling-exploration-tool-that-every-nlp-data-scientist-should-know"""
+    model_gensim = LdaModel(
+        id2word=mallet_model.id2word, num_topics=mallet_model.num_topics,
+        alpha=mallet_model.alpha, eta=0,
+    )
+    model_gensim.state.sstats[...] = mallet_model.wordtopics
+    model_gensim.sync_state()
+    return model_gensim
+
+
+
+if __name__ == '__main__':
 
     spc = spacy.load('en_core_web_sm')
 
-    dataset = "news_dataset"
+    dataset = "news_dataset_small"
     n_sentences = 50
     n_topics = 20
 
@@ -184,4 +249,10 @@ if __name__ == '__main__':
 
     mallet_model = build_mallet_model(corpus, dictionary, n_topics=n_topics)
     _, coherence_mallet = evaluate_lda(mallet_model, dictionary, corpus, processed, use_multicore=True)
+    converted_model = convertldaGenToldaMallet(mallet_model)
+    _, coherence_converted = evaluate_lda(converted_model, dictionary, corpus, processed, use_multicore=True)
     print("coherence mallet", coherence_mallet)
+    print("coherence mallet converted", coherence_converted)
+
+    # df = format_topics_sentences(convertldaGenToldaMallet(mallet_model), corpus, processed, n_docs=100, n_topics=n_topics)
+    # print(df)

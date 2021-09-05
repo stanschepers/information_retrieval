@@ -158,7 +158,7 @@ This plot is given below using our dataset and model for different values of $k$
 
 Earlier versions of`gensim ` provided twee implementations of the LDA: normal LDA and Mallet LDA. The normal (gensim) LDA uses an *online variational Bayes algorithm* by Hoffman et al. Mallet LDA uses optimized *Gibbs sampling algorithm* by Yao et al. Note that MALLET is Java-based statistical NLP packacke that requires to be installed separately [^mallet].  Current versions of `gensim`don't have to wrapper class to use MALLET so this is added the code from earlier version.
 
-This source [^optimal] claims that using Mallet LDA will increase the coherence scores by a few points. The results between the comparison are shown below. Note that for this experiments `SpaCy`preprocessing was used.
+This source [^optimal] claims that using Mallet LDA will increase the coherence scores by a few points. The results between the comparison are shown below. Note that for this experiments `SpaCy`preprocessing was used. For 'translating' MalletLDA to GenSimLDA I used code from [^mallettransform]. 
 
 | Model      | Coherence Mean |
 | ---------- | -------------- |
@@ -166,6 +166,8 @@ This source [^optimal] claims that using Mallet LDA will increase the coherence 
 | MALLET LDA | 0.513146       |
 
 Mallet LDA performance in our case a little bit better.
+
+[^mallettransform]: https://neptune.ai/blog/pyldavis-topic-modelling-exploration-tool-that-every-nlp-data-scientist-should-know
 
 ### SpaCy Preprocessing
 
@@ -195,25 +197,116 @@ Finally after all these experiments I notice that many differences in the result
 
 ### Choosen Preprocessing
 
+For preprocessing SpaCy was choosen as this was way faster at doing the same job. In addition to the tokenisation, case-folding, lemmatization, keeping only wanted part-of-speech elements (adverbs, adjectives, nouns, verbs and proper nouns), I also added 
+
 ### Choosen Model and Hyperparameters
 
 Given 20 is the optimal $k$ Value, I will be using that. As we have seen that Mallet LDA performances slightly better I will be using this.
 
 ### Results Top 100 with $k=20$​
 
-Results
+For each topic, top 100 document that best represents it are given in `topic_document_rank.csv`.  Each column in the CSV file represents a topic. The first lrow of the file contains the respective topic ids for each column. The remaining lines will contain the results in decreasing order for each topic.
+
+Below a list of the topic ids with its respective topics are given. For each topic also a couple of relevant terms were given that contributed to my decision of naming the topic. The difference between larger and smaller $\lambda$ is given in the paragraph about visualisation.
+
+The coherence score of this model is 0.5131154325129239.
+
+| Topic Id | Topic                             | Relevant Terms (larger $\lambda$)                            | Relevant Terms (smaller $\lambda$)                           |
+| -------: | --------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+|        1 | Law Inforcement, Police           | police, arrest, man, officier                                | police_officier, cop, shooting                               |
+|        2 | Culture                           | Artist, world, write, story, music                           | Beyoncé, book, album                                         |
+|        3 | Presidential Campagne 2016        | Trump, Clinton, campaign, tweet, Trump_campaign, candidate   | Tim_Kaine (candidate vice-president), elector, Crooked_Hillary |
+|        4 | International (Geo)Politics       | Trump, Washington, foreign_policy, Putin, World, China, country | NATO, NAFTA, trade_deal, Xi_Jinping                          |
+|        5 | 2016 Party presidential primaries | Trump, Cruz, win, election, party, Bernie_Sanders, Hillary_Clinton, lead, race | Win_nomination, Cruz_campaign, Iowa_caucus, primary          |
+|        6 | Middle East                       | Syria, report, attack, military, U.S.                        | ISIS, Mosul, Taliban, Iraq,                                  |
+|        7 | Finance                           | Company, business, investor, sell, economy                   | Interest_rate, stock_market, unemployment_rate               |
+|        8 | Twitter (comedy)                  | Donald_Trump, Breitbart_news, think                          | Bill_Maher (comedian), @IanHanchett, @pamkeyNEN, Hanchett_Twitter |
+|        9 | Movies                            | film, movie, star, director, actor                           | Star_Wars, Harry_Potter, Hollywood                           |
+|       10 | Education and Research            | student, help, study, university, child, scientist, school   | New_study, lead_author, Yale (university), classroom         |
+|       11 | Russian Hack                      | Investigation, state_department, case, official, information, Russia | FBI, CIA, WikiLeaks, Russian_intelligence, NSA               |
+|       12 | U.S. Congress                     | Congress, bill, government, vote, repulicans, democrats, law, plan | Obamacarse, House_Republicans, Congressional_Budget, bill_pass, Freedom_Caucus |
+|       13 | Foreign Politics                  | Government, law, vote, state, party, Britain, Europe         | European_Union, EU, Brexit, Boris_Johnson, Pope Francis      |
+|       14 | Justice                           | State, law, lawyer, prosecutor                               | trial, court, sentence, file_lawsuit,                        |
+|       15 | Science and Geography             | city, water, land, Earth,                                    | NASA, ocean, rain                                            |
+|       16 | Companies                         | company, employee, technology, customer                      | Apple, Uber, Google, iPhone                                  |
+|       17 | White House                       | Trump_administration, White_house, president_Donal, decision | Executive_order, travel_ban, Spicer (WH press secretary),    |
+|       18 | Sports                            | Game, player, athlete, team, season                          | NFL, Olympics                                                |
+|       19 | Social Media                      | Facebook, social_medium, website, Twitter, Platform, ad      | Reddit, SnapChat,                                            |
+|       20 | Immigration and Gun Control       | immigrant, gun control, border                               | Central America, NRA, drug_traficking                        |
 
 ### Visualisation
 
 For visualising these results I have used the library `pyLDAvis`[^vis], "a port of the fabulous R package[^r] by Carson Sievert and Kenny Shirley". This library allows uses to visualise the different topics as clusters and to compare word frequency between the whole dataset and a certain topic. The circles on the left are topic circles [^circle]. These represent each topic with the area set to be proportional to the proportions of the topics across all tokens in the corpus. The position of the circle is determined by using multidimensional scaling on an inter-topic distance matrix that is computed using Jensen-Shannon divergence, a measure that I learned in my bioinformatics class . This will visualise the level of similarity of the topics into the Cartesian space. This means that more similar topics will be closer toghether.
 
-Because the visualisations are interative in a Jupyter notebook, screenshots will be provided below in this report however an interactive version can be found in `lda_visualisation.ipynb`.  In this section we will discuss the visualisation of an LDA model using the default preprocessing + lemmatisation with  20 topics.![Screenshot 2021-09-05 at 12.50.11](Screenshot 2021-09-05 at 12.50.11.png)
+Because the visualisations are interative in a Jupyter notebook, screenshots will be provided below in this report however an interactive version can be found in `lda_visualisation.ipynb`.  In this section we will discuss the visualisation of an LDA model, not the final model, using the `SpaCy` preprocessing + lemmatisation with 20 topics.
+
+<img src="Screenshot 2021-09-05 at 16.02.04.png" alt="Screenshot 2021-09-05 at 16." style="zoom: 50%;" />
+
+At first sight we see that the topics are spread around the 2D space with certain groups closer to each other. Let's discuss the left group consisting of topics 2, 5, 11, 14 using the most relevent terms on the right side. 
+
+<div style="display: flex;">   
+	<div style="  flex: 33.33%;padding: 5px;">     
+		<img src="Screenshot 2021-09-05 at 16.07.57.png" alt="Snow" style="width:100%">  
+  </div>   
+		<div style="  flex: 33.33%;padding: 5px;">         
+	<img src="Screenshot 2021-09-05 at 16.26.41.png" alt="Mountains" style="width:100%">   
+		</div>
+</div>
+<div style="display: flex;">   
+	<div style="  flex: 33.33%;padding: 5px;">     
+		<img src="Screenshot 2021-09-05 at 16.09.58.png" alt="Snow" style="width:100%">  
+  </div>   
+		<div style="  flex: 33.33%;padding: 5px;">         
+	<img src="Screenshot 2021-09-05 at 16.10.15.png" alt="Mountains" style="width:100%">   
+		</div>
+</div>
+
+Using this we see an interesting main topic: political news. However this broad topic is split in different topics:
+
+- **Topic 2:** World leader news (President Obama, Putin, President Trump, ...)
+- **Topic 5:** News on the campaign for the presidential elections (Trump Campaign, investigation, email, alligation, Fox News,)
+- **Topic 11:** News on the U.S. Federal government, U.S. Congress (Afforable Care Act, Health Insurance, Obamacare, vote, bill, pass, congress)
+- **Topic 14:** News on political issues (Free Speech, Civil Right, protest, activist, issue, people)
+
+Note that n-grams really helped to distinguish certain topics better like in topic 5, the news on the campaign, the token "President_Trump" does not appear because at the time of the news he was not president. However in topic 2, world leaders and politics, he is and the token "President_Trump" start to appear. Also names appear that would have different meaning if the different words in the name would be seperated like "Fox News". If for example a lot of texts out of biology classes were included about animals like foxes this could have an effect on the model because it can distinguigh between them.
+
+Also the preprocessing from SpaCy worked will in lemmatization (all words presended are root terms) and only verbs, nouns, adjectives, adverbs and proper nouns are present. (execpt for the "_" which is not discarded during preprocessing.)
+
+The following visualisation is the one of the final model.
+
+![Screenshot 2021-09-05 at 20.12.46](Screenshot 2021-09-05 at 20.12.46.png)
+
+After naming the different topics we note sevaral interesting things from this graph:
+
+1. Similar topics are closer to each other eg. Topic 3 and 5 (Presidential Campagne, Presidential Primaries), Topic 16 and 19 (Companies and Social Media), ...
+2. The articles are more or less evenly distruted amont the topics.
+3. ...
+
+Some notes are best shared on the graph it self, so I have drawn the graph using the topics names instead of ids and annotated some thought I had seeing this topics on the graph.
+
+<img src="annotations.png" alt="Annoations" style="zoom: 50%;" />
+
+### Relevant terms and $\lambda$
+
+When identifying topics the relevant words given by `pyLDAvis` are a useful tool. When looking at the relevant terms of a certain topic it is possible to change the $\lambda$ value in the relevance score. I noticed that this has an effect on the relevant terms returned in an useful way. When the $\lambda$ is high it returns terms that relevant to topic but occur a lot in the dataset and also occur in different (similar) topics. When setting $\lambda$ to a small value it will return still relevant terms but these terms will almost exclusively be found in this certain topic. 
+
+This comes in handy as to determine the topic names of certain topics that have very general relevant terms, however when lowering the $\lambda$ certaining identifiable  terms come up.This is why I choosen give two kind of relevant terms with the topic names.
+
+Another interesting thing I found with playing with this lambda value is that when lowering this value sometimes terms come up that are indentified wrongly by the model. Because of the low lambda value, these terms will almost exclusivly being identified wrongly. In the future I would like to check if this method is an easy way to identify problems in the model. An example in our data set was "Boko_Haram" that was in the topic of "Immigration and Gun Control" but one would think that this should be in the topic "Middle East". This topics are found close to each other, thus probably some hyperparameter tuning will do the trick here.
 
 
 
 [^vis]: https://pyldavis.readthedocs.io/en/latest/readme.html
 [^r]: https://github.com/cpsievert/LDAvis
 [^circle]: https://cran.r-project.org/web/packages/LDAvis/vignettes/details.pdf
+
+
+
+## Wrapping Up
+
+As a final note I want to acknowledge the art of natural language processing. Languages are hard to measure and to understand in algorithms. For example my base model and my final model have similar coherence scores however when looking at the outcome of the model. The final model gives a lot more insight in the dataset. It has to be said, "All models (and visualisation tools) are wrong, some are just more useful than others".
+
+In the future I would like to work on improving the performance, implmenting a frameworking for easy and fast preprocessing —long proccing time makes this hard— and more visualisations.
 
 ## References
 
